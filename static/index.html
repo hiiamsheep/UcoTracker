@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Camera Selector</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, Helvetica, sans-serif;
+            background-color: #111;
+            color: #eee;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            padding: 20px;
+        }
+
+        label {
+            margin: 8px 0 4px 0;
+            font-weight: bold;
+            align-self: flex-start;
+            max-width: 480px;
+        }
+
+        select {
+            width: 100%;
+            max-width: 480px;
+            padding: 10px;
+            margin-bottom: 15px;
+            border-radius: 5px;
+            border: none;
+            font-size: 16px;
+            background-color: #222;
+            color: #eee;
+        }
+
+        video {
+            margin-top: 20px;
+            border: 2px solid #444;
+            border-radius: 8px;
+            max-width: 480px;
+            width: 100%;
+            background-color: black;
+        }
+
+        #errorMsg {
+            color: #f44;
+            margin-top: 10px;
+            max-width: 480px;
+            align-self: flex-start;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Choose Camera</h1>
+
+    <label for="cameraSelect">Camera:</label>
+    <select id="cameraSelect"></select>
+
+    <video id="video" playsinline></video>
+
+    <div id="errorMsg"></div>
+
+    <script src="https://cdn.jsdelivr.net/gh/jcmellado/js-aruco/build/aruco.min.js"></script>
+    <script>
+        const cameraSelect = document.getElementById('cameraSelect');
+        const video = document.getElementById('video');
+        const errorMsg = document.getElementById('errorMsg');
+        let currentStream = null;
+
+        async function listCameras() {
+            try {
+                const devices = await navigator.mediaDevices.enumerateDevices();
+                const videoDevices = devices.filter(d => d.kind === 'videoinput');
+                cameraSelect.innerHTML = '';
+                videoDevices.forEach((device, i) => {
+                    const option = document.createElement('option');
+                    option.value = device.deviceId;
+                    option.text = device.label || `Camera ${i + 1}`;
+                    cameraSelect.appendChild(option);
+                });
+            } catch (err) {
+                errorMsg.textContent = `Error listing cameras: ${err.message}`;
+            }
+        }
+
+        async function startStream() {
+            if (currentStream) {
+                currentStream.getTracks().forEach(track => track.stop());
+            }
+            errorMsg.textContent = '';
+            const deviceId = cameraSelect.value;
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    video: { deviceId: deviceId ? { exact: deviceId } : undefined }
+                });
+                currentStream = stream;
+                video.srcObject = stream;
+                await video.play();
+            } catch (err) {
+                errorMsg.textContent = `Error accessing camera: ${err.message}`;
+            }
+        }
+
+        cameraSelect.addEventListener('change', startStream);
+
+        // ask permission to access any camera to get labels, then list cameras
+        (async () => {
+            try {
+                await navigator.mediaDevices.getUserMedia({ video: true });
+            } catch {
+                // user might deny, labels may be empty but still list devices
+            }
+            await listCameras();
+            if (cameraSelect.options.length) {
+                startStream();
+            }
+        })();
+    </script>
+</body>
+
+</html>
