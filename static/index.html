@@ -2,131 +2,346 @@
 <html lang="en">
 
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Camera Selector</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Camera + OpenCV.js ArUco + Three.js AR Demo</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
 
-        body {
-            font-family: Arial, Helvetica, sans-serif;
-            background-color: #111;
-            color: #eee;
-            height: 100vh;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: flex-start;
-            padding: 20px;
-        }
+    body {
+      font-family: Arial, Helvetica, sans-serif;
+      background-color: #111;
+      color: #eee;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      padding: 20px;
+    }
 
-        label {
-            margin: 8px 0 4px 0;
-            font-weight: bold;
-            align-self: flex-start;
-            max-width: 480px;
-        }
+    label {
+      margin: 8px 0 4px 0;
+      font-weight: bold;
+      align-self: flex-start;
+      max-width: 480px;
+    }
 
-        select {
-            width: 100%;
-            max-width: 480px;
-            padding: 10px;
-            margin-bottom: 15px;
-            border-radius: 5px;
-            border: none;
-            font-size: 16px;
-            background-color: #222;
-            color: #eee;
-        }
+    select {
+      width: 100%;
+      max-width: 480px;
+      padding: 10px;
+      margin-bottom: 15px;
+      border-radius: 5px;
+      border: none;
+      font-size: 16px;
+      background-color: #222;
+      color: #eee;
+    }
 
-        video {
-            margin-top: 20px;
-            border: 2px solid #444;
-            border-radius: 8px;
-            max-width: 480px;
-            width: 100%;
-            background-color: black;
-        }
+    #videoContainer {
+      position: relative;
+      max-width: 812px;
+      width: 100%;
+      height: 339px;
+      background: black;
+      overflow: hidden;
+      border-radius: 8px;
+      border: 2px solid #444;
+    }
 
-        #errorMsg {
-            color: #f44;
-            margin-top: 10px;
-            max-width: 480px;
-            align-self: flex-start;
-        }
-    </style>
+    video,
+    canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 812px;
+      height: 339px;
+      object-fit: cover;
+      border-radius: 8px;
+      user-select: none;
+      -webkit-user-select: none;
+      -moz-user-select: none;
+      -ms-user-select: none;
+      pointer-events: none;
+    }
+
+    #video {
+      z-index: 0;
+    }
+
+    #arucoCanvas {
+      z-index: 1;
+    }
+
+    #threeCanvas {
+      z-index: 2;
+      pointer-events: auto; /* for three.js interactivity if needed */
+    }
+
+    #errorMsg {
+      color: #f44;
+      margin-top: 10px;
+      max-width: 480px;
+      align-self: flex-start;
+    }
+  </style>
 </head>
 
 <body>
-    <h1>Choose Camera</h1>
+  <h1>Choose Camera</h1>
 
-    <label for="cameraSelect">Camera:</label>
-    <select id="cameraSelect"></select>
+  <label for="cameraSelect">Camera:</label>
+  <select id="cameraSelect"></select>
 
-    <video id="video" playsinline></video>
+  <div id="videoContainer">
+    <video id="video" playsinline autoplay></video>
+    <canvas id="arucoCanvas" width="812" height="339"></canvas>
+    <canvas id="threeCanvas" width="812" height="339"></canvas>
+  </div>
 
-    <div id="errorMsg"></div>
+  <div id="errorMsg"></div>
 
-    <script src="https://cdn.jsdelivr.net/gh/jcmellado/js-aruco/build/aruco.min.js"></script>
-    <script>
-        const cameraSelect = document.getElementById('cameraSelect');
-        const video = document.getElementById('video');
-        const errorMsg = document.getElementById('errorMsg');
-        let currentStream = null;
+  <!-- Three.js -->
+  <script src="https://cdn.jsdelivr.net/gh/mrdoob/three.js@r111/build/three.min.js"></script>
 
-        async function listCameras() {
-            try {
-                const devices = await navigator.mediaDevices.enumerateDevices();
-                const videoDevices = devices.filter(d => d.kind === 'videoinput');
-                cameraSelect.innerHTML = '';
-                videoDevices.forEach((device, i) => {
-                    const option = document.createElement('option');
-                    option.value = device.deviceId;
-                    option.text = device.label || `Camera ${i + 1}`;
-                    cameraSelect.appendChild(option);
-                });
-            } catch (err) {
-                errorMsg.textContent = `Error listing cameras: ${err.message}`;
-            }
+  <!-- OpenCV.js -->
+  <script async src="https://docs.opencv.org/4.7.0/opencv.js" onload="onOpenCvReady();" type="text/javascript"></script>
+
+  <script>
+    const cameraSelect = document.getElementById("cameraSelect");
+    const video = document.getElementById("video");
+    const arucoCanvas = document.getElementById("arucoCanvas");
+    const arucoCtx = arucoCanvas.getContext("2d");
+    const threeCanvas = document.getElementById("threeCanvas");
+    const errorMsg = document.getElementById("errorMsg");
+
+    let currentStream = null;
+    let streaming = false;
+
+    // OpenCV variables
+    let cap, srcMat, grayMat;
+    let dictionary, parameters, ids, corners, rejected;
+    let rvecs, tvecs;
+
+    // Three.js variables
+    let camera3D, scene, renderer, cube;
+
+    async function listCameras() {
+      try {
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const videoDevices = devices.filter((d) => d.kind === "videoinput");
+        cameraSelect.innerHTML = "";
+        videoDevices.forEach((device, i) => {
+          const option = document.createElement("option");
+          option.value = device.deviceId;
+          option.text = device.label || `Camera ${i + 1}`;
+          cameraSelect.appendChild(option);
+        });
+      } catch (err) {
+        errorMsg.textContent = `Error listing cameras: ${err.message}`;
+        console.error(err);
+      }
+    }
+
+    async function startStream() {
+      if (currentStream) {
+        currentStream.getTracks().forEach((track) => track.stop());
+      }
+      errorMsg.textContent = "";
+      const deviceId = cameraSelect.value;
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { deviceId: deviceId ? { exact: deviceId } : undefined, width: 812, height: 339 },
+        });
+        currentStream = stream;
+        video.srcObject = stream;
+        await video.play();
+        streaming = true;
+        initOpenCV();
+        initThreeJS();
+        requestAnimationFrame(processFrame);
+      } catch (err) {
+        errorMsg.textContent = `Error accessing camera: ${err.message}`;
+        console.error(err);
+      }
+    }
+
+    function initOpenCV() {
+      if (cap) cap.delete();
+      if (srcMat) srcMat.delete();
+      if (grayMat) grayMat.delete();
+      if (ids) ids.delete();
+      if (corners) corners.delete();
+      if (rejected) rejected.delete();
+      if (rvecs) rvecs.delete();
+      if (tvecs) tvecs.delete();
+
+      cap = new cv.VideoCapture(video);
+      srcMat = new cv.Mat(video.videoHeight, video.videoWidth, cv.CV_8UC4);
+      grayMat = new cv.Mat(video.videoHeight, video.videoWidth, cv.CV_8UC1);
+
+      if (cv.aruco.getPredefinedDictionary) {
+        dictionary = cv.aruco.getPredefinedDictionary(cv.aruco.DICT_6X6_250);
+      } else if (cv.aruco_Dictionary) {
+        dictionary = new cv.aruco_Dictionary(cv.aruco.DICT_6X6_250);
+      } else {
+        alert("ArUco dictionary function not available in this OpenCV.js build");
+        return;
+      }
+      parameters = new cv.aruco_DetectorParameters();
+      ids = new cv.Mat();
+      corners = new cv.MatVector();
+      rejected = new cv.MatVector();
+      rvecs = new cv.Mat();
+      tvecs = new cv.Mat();
+    }
+
+    function initThreeJS() {
+      // Setup three.js scene, camera, renderer
+      if (renderer) {
+        renderer.dispose();
+        renderer.forceContextLoss();
+        renderer.context = null;
+        renderer.domElement = null;
+      }
+
+      renderer = new THREE.WebGLRenderer({ canvas: threeCanvas, alpha: true, antialias: true });
+      renderer.setSize(812, 339);
+      renderer.setClearColor(0x000000, 0); // transparent
+
+      scene = new THREE.Scene();
+
+      // FOV, aspect, near, far should be set close to your real camera parameters
+      camera3D = new THREE.PerspectiveCamera(40, 812 / 339, 0.01, 1000);
+      camera3D.position.set(0, 0, 1);
+
+      // Simple cube to show on marker
+      const geometry = new THREE.BoxGeometry(0.2, 0.2, 0.2);
+      const material = new THREE.MeshNormalMaterial();
+      cube = new THREE.Mesh(geometry, material);
+      scene.add(cube);
+      cube.visible = false;
+    }
+
+    // Converts rotation vector + translation vector to THREE.js matrix4
+    function buildPoseMatrix(rvec, tvec) {
+      // Convert rotation vector to rotation matrix (Rodrigues)
+      let rmat = new cv.Mat();
+      cv.Rodrigues(rvec, rmat);
+
+      // 3x3 rotation matrix
+      let mat = new THREE.Matrix4();
+
+      // Copy rotation values (rmat is 3x3, in float64)
+      const rotation = new Float32Array([
+        rmat.data64F[0], rmat.data64F[3], rmat.data64F[6], 0,
+        rmat.data64F[1], rmat.data64F[4], rmat.data64F[7], 0,
+        rmat.data64F[2], rmat.data64F[5], rmat.data64F[8], 0,
+        0, 0, 0, 1,
+      ]);
+
+      mat.fromArray(rotation);
+
+      // Set translation
+      mat.setPosition(new THREE.Vector3(tvec.data64F[0], tvec.data64F[1], tvec.data64F[2]));
+
+      rmat.delete();
+
+      return mat;
+    }
+
+    function processFrame() {
+      if (!streaming) return;
+
+      try {
+        cap.read(srcMat);
+        cv.cvtColor(srcMat, grayMat, cv.COLOR_RGBA2GRAY);
+
+        // Detect markers + pose estimation
+        cv.aruco.detectMarkers(grayMat, dictionary, corners, ids, parameters, rejected);
+
+        arucoCtx.clearRect(0, 0, arucoCanvas.width, arucoCanvas.height);
+        arucoCtx.drawImage(video, 0, 0, arucoCanvas.width, arucoCanvas.height);
+
+        if (ids.rows > 0) {
+          // Draw detected markers on canvas
+          cv.aruco.drawDetectedMarkers(srcMat, corners, ids);
+
+          // Estimate pose for each marker
+          // Camera matrix + distortion coeffs should be calibrated for your camera for best results
+          // Here we use some default-ish calibration values, tweak for your device
+          const cameraMatrix = cv.matFromArray(3, 3, cv.CV_64F, [
+            812, 0, 812 / 2,
+            0, 812, 339 / 2,
+            0, 0, 1,
+          ]);
+          const distCoeffs = cv.Mat.zeros(5, 1, cv.CV_64F);
+
+          cv.aruco.estimatePoseSingleMarkers(corners, 0.1, cameraMatrix, distCoeffs, rvecs, tvecs);
+
+          // For demo, use only first detected marker's pose to place cube
+          if (ids.rows > 0) {
+            const rvec = new cv.Mat();
+            const tvec = new cv.Mat();
+
+            rvec = rvecs.row(0);
+            tvec = tvecs.row(0);
+
+            // Build transformation matrix for three.js
+            const poseMat = buildPoseMatrix(rvec, tvec);
+
+            // Apply pose matrix to cube
+            cube.visible = true;
+            cube.matrixAutoUpdate = false;
+            cube.matrix.copy(poseMat);
+
+            rvec.delete();
+            tvec.delete();
+          }
+
+          cameraMatrix.delete();
+          distCoeffs.delete();
+        } else {
+          cube.visible = false;
         }
 
-        async function startStream() {
-            if (currentStream) {
-                currentStream.getTracks().forEach(track => track.stop());
-            }
-            errorMsg.textContent = '';
-            const deviceId = cameraSelect.value;
-            try {
-                const stream = await navigator.mediaDevices.getUserMedia({
-                    video: { deviceId: deviceId ? { exact: deviceId } : undefined }
-                });
-                currentStream = stream;
-                video.srcObject = stream;
-                await video.play();
-            } catch (err) {
-                errorMsg.textContent = `Error accessing camera: ${err.message}`;
-            }
+        cv.imshow("arucoCanvas", srcMat);
+
+        renderer.render(scene, camera3D);
+      } catch (e) {
+        console.error(e);
+      }
+
+      requestAnimationFrame(processFrame);
+    }
+
+    function onOpenCvReady() {
+      console.log("OpenCV.js ready");
+
+      (async () => {
+        try {
+          await navigator.mediaDevices.getUserMedia({ video: true });
+        } catch (e) {
+          console.warn("Camera access denied or not granted");
         }
 
-        cameraSelect.addEventListener('change', startStream);
+        await listCameras();
 
-        // ask permission to access any camera to get labels, then list cameras
-        (async () => {
-            try {
-                await navigator.mediaDevices.getUserMedia({ video: true });
-            } catch {
-                // user might deny, labels may be empty but still list devices
-            }
-            await listCameras();
-            if (cameraSelect.options.length) {
-                startStream();
-            }
-        })();
-    </script>
+        if (cameraSelect.options.length) {
+          startStream();
+        } else {
+          errorMsg.textContent = "No cameras found.";
+        }
+      })();
+    }
+
+    cameraSelect.addEventListener("change", startStream);
+  </script>
 </body>
 
 </html>
