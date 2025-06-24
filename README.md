@@ -20,7 +20,7 @@ Accessible on the local network.
 
     ```bash
     git clone https://github.com/hiiamsheep/UcoTracker.git
-    cd aruco-inventory
+    cd UcoTracker
     ```
 
 2. Run the app:
