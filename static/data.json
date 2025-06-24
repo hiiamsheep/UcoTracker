@@ -12,7 +12,7 @@
 		"info":	"Description"
 	},
 	"1":	{
-		"content":	["Item number 1", "Item 2", "Something else"],
-		"info":	"This is marker 1 :)"
+		"content":	[],
+		"info":	""
 	}
 }
