@@ -26,7 +26,7 @@ Accessible on the local network.
 2. Run the app:
 
     ```bash
-    v .
+    v run .
     ```
 
 3. Open another terminal and forward the local server through Ngrok:
