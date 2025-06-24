@@ -1,9 +1,9 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>Live ArUco Marker Scanner with Editing</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta charset="UTF-8">
+  <title>UcoTracker</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
     body {
       margin: 0;
@@ -93,6 +93,10 @@
       margin-bottom: 0.3rem;
       font-size: 1rem;
     }
+    #cancelBtn {
+      background: #555;
+      color: #eee;
+    }
     #editForm {
       margin-top: 1rem;
       display: none;
@@ -167,8 +171,8 @@
   <label for="contentInput">Content items (one per line):</label>
   <textarea id="contentInput" rows="4"></textarea>
 
-  <button id="saveBtn">Save</button>
-  <button id="cancelBtn" style="background:#555; color:#eee;">Cancel</button>
+  <button id="saveBtn" type="button">Save</button>
+  <button id="cancelBtn" type="button">Cancel</button>
 </section>
 
 <script src="cv.js"></script>
