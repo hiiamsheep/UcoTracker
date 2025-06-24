@@ -7,8 +7,7 @@ Accessible on the local network.
 
 - Detects Aruco markers via the device's camera
 - Tracks items using unique marker IDs
-- Lightweight and easy to deploy
-- Runs in the browser via local network
+- Lightweight and easy to use
 
 ## Requirements
 
@@ -27,7 +26,7 @@ Accessible on the local network.
 2. Run the app:
 
     ```bash
-    v -d veb_livereload watch run .
+    v .
     ```
 
 3. Open another terminal and forward the local server through Ngrok:
