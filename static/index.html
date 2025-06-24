@@ -1,347 +1,500 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Camera + OpenCV.js ArUco + Three.js AR Demo</title>
+  <meta charset="UTF-8" />
+  <title>Live ArUco Marker Scanner with Editing</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
-
     body {
-      font-family: Arial, Helvetica, sans-serif;
-      background-color: #111;
+      margin: 0;
+      background-color: #121212;
       color: #eee;
-      height: 100vh;
+      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
       display: flex;
       flex-direction: column;
       align-items: center;
-      justify-content: flex-start;
-      padding: 20px;
+      min-height: 100vh;
+      padding: 1rem;
+      box-sizing: border-box;
     }
-
-    label {
-      margin: 8px 0 4px 0;
-      font-weight: bold;
-      align-self: flex-start;
-      max-width: 480px;
-    }
-
-    select {
+    header {
+      margin-bottom: 1rem;
       width: 100%;
-      max-width: 480px;
-      padding: 10px;
-      margin-bottom: 15px;
-      border-radius: 5px;
+      max-width: 640px;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 1.1rem;
+    }
+    label {
+      font-weight: 600;
+    }
+    select {
+      padding: 0.4rem 0.8rem;
+      font-size: 1rem;
+      border-radius: 6px;
       border: none;
-      font-size: 16px;
       background-color: #222;
       color: #eee;
+      cursor: pointer;
+      transition: background-color 0.2s ease;
     }
-
+    select:hover, select:focus {
+      background-color: #333;
+      outline: none;
+    }
     #videoContainer {
       position: relative;
-      max-width: 812px;
       width: 100%;
-      height: 339px;
-      background: black;
+      max-width: 640px;
+      aspect-ratio: 4 / 3;
+      background-color: #000;
+      border-radius: 8px;
       overflow: hidden;
-      border-radius: 8px;
-      border: 2px solid #444;
+      box-shadow: 0 0 20px rgba(0,0,0,0.7);
     }
-
-    video,
-    canvas {
+    video, canvas {
       position: absolute;
-      top: 0;
-      left: 0;
-      width: 812px;
-      height: 339px;
-      object-fit: cover;
-      border-radius: 8px;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      max-width: 100%;
+      max-height: 100%;
       user-select: none;
-      -webkit-user-select: none;
-      -moz-user-select: none;
-      -ms-user-select: none;
       pointer-events: none;
+      border-radius: 8px;
     }
-
-    #video {
-      z-index: 0;
+    #markerInfo {
+      margin-top: 1rem;
+      max-width: 640px;
+      background-color: #1e1e1e;
+      padding: 1rem 1.5rem;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(255, 255, 255, 0.05);
+      min-height: 80px;
+      position: relative;
     }
-
-    #arucoCanvas {
-      z-index: 1;
+    #markerInfo h3 {
+      margin-top: 0;
+      font-size: 1.4rem;
+      color: #f5a623;
     }
-
-    #threeCanvas {
-      z-index: 2;
-      pointer-events: auto; /* for three.js interactivity if needed */
+    #markerInfo p {
+      font-size: 1rem;
+      line-height: 1.4;
+      margin-bottom: 1rem;
+      white-space: pre-wrap;
     }
-
-    #errorMsg {
-      color: #f44;
-      margin-top: 10px;
-      max-width: 480px;
-      align-self: flex-start;
+    #markerInfo ul {
+      padding-left: 1.2rem;
+      margin: 0;
+    }
+    #markerInfo ul li {
+      margin-bottom: 0.3rem;
+      font-size: 1rem;
+    }
+    #editForm {
+      margin-top: 1rem;
+      display: none;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+    #editForm textarea {
+      width: 100%;
+      min-height: 60px;
+      font-family: monospace;
+      font-size: 1rem;
+      border-radius: 6px;
+      border: none;
+      padding: 0.5rem;
+      resize: vertical;
+    }
+    #editForm input[type="text"] {
+      width: 100%;
+      font-size: 1rem;
+      border-radius: 6px;
+      border: none;
+      padding: 0.4rem 0.6rem;
+    }
+    #editForm button {
+      padding: 0.5rem 1rem;
+      font-size: 1rem;
+      border-radius: 6px;
+      border: none;
+      cursor: pointer;
+      background-color: #f5a623;
+      color: #121212;
+      font-weight: 600;
+      transition: background-color 0.2s ease;
+    }
+    #editForm button:hover {
+      background-color: #d18e00;
+    }
+    @media (max-width: 500px) {
+      body {
+        padding: 0.5rem;
+      }
+      header {
+        font-size: 1rem;
+      }
+      #markerInfo {
+        padding: 1rem;
+      }
     }
   </style>
 </head>
-
 <body>
-  <h1>Choose Camera</h1>
 
-  <label for="cameraSelect">Camera:</label>
-  <select id="cameraSelect"></select>
+<header>
+  <label for="cameraSelect">Choose your camera:</label>
+  <select id="cameraSelect" aria-label="Camera selection"></select>
+</header>
 
-  <div id="videoContainer">
-    <video id="video" playsinline autoplay></video>
-    <canvas id="arucoCanvas" width="812" height="339"></canvas>
-    <canvas id="threeCanvas" width="812" height="339"></canvas>
-  </div>
+<main id="videoContainer">
+  <video id="video" autoplay muted playsinline></video>
+  <canvas id="canvas"></canvas>
+</main>
 
-  <div id="errorMsg"></div>
+<section id="markerInfo" aria-live="polite" aria-atomic="true" role="region">
+  <p>No markers detected yet. Point your camera at an ArUco marker!</p>
+</section>
 
-  <!-- Three.js -->
-  <script src="https://cdn.jsdelivr.net/gh/mrdoob/three.js@r111/build/three.min.js"></script>
+<!-- Edit form -->
+<section id="editForm">
+  <label for="infoInput">Description:</label>
+  <textarea id="infoInput" rows="3"></textarea>
 
-  <!-- OpenCV.js -->
-  <script async src="https://docs.opencv.org/4.7.0/opencv.js" onload="onOpenCvReady();"></script>
+  <label for="contentInput">Content items (one per line):</label>
+  <textarea id="contentInput" rows="4"></textarea>
 
-  <script>
-    const cameraSelect = document.getElementById("cameraSelect");
-    const video = document.getElementById("video");
-    const arucoCanvas = document.getElementById("arucoCanvas");
-    const arucoCtx = arucoCanvas.getContext("2d");
-    const threeCanvas = document.getElementById("threeCanvas");
-    const errorMsg = document.getElementById("errorMsg");
+  <button id="saveBtn">Save</button>
+  <button id="cancelBtn" style="background:#555; color:#eee;">Cancel</button>
+</section>
 
-    let currentStream = null;
-    let streaming = false;
+<script src="cv.js"></script>
+<script src="aruco.js"></script>
 
-    // OpenCV variables
-    let cap, srcMat, grayMat;
-    let dictionary, parameters, ids, corners, rejected;
-    let rvecs, tvecs;
+<script>
+  const video = document.getElementById('video');
+  const canvas = document.getElementById('canvas');
+  const ctx = canvas.getContext('2d');
+  const cameraSelect = document.getElementById('cameraSelect');
+  const markerInfo = document.getElementById('markerInfo');
 
-    // Three.js variables
-    let camera3D, scene, renderer, cube;
+  const editForm = document.getElementById('editForm');
+  const infoInput = document.getElementById('infoInput');
+  const contentInput = document.getElementById('contentInput');
+  const saveBtn = document.getElementById('saveBtn');
+  const cancelBtn = document.getElementById('cancelBtn');
 
-    async function listCameras() {
-      try {
-        const devices = await navigator.mediaDevices.enumerateDevices();
-        const videoDevices = devices.filter((d) => d.kind === "videoinput");
-        cameraSelect.innerHTML = "";
-        videoDevices.forEach((device, i) => {
-          const option = document.createElement("option");
-          option.value = device.deviceId;
-          option.text = device.label || `Camera ${i + 1}`;
-          cameraSelect.appendChild(option);
-        });
-      } catch (err) {
-        errorMsg.textContent = `Error listing cameras: ${err.message}`;
-        console.error(err);
-      }
-    }
+  let currentStream = null;
+  const detector = new AR.Detector();
+  const markerStatus = new Map(); // id → status: 1=green,0=orange,-1=red
+  let detectedIds = new Set();
+  let frameCount = 0;
 
-    async function startStream() {
-      if (currentStream) {
-        currentStream.getTracks().forEach((track) => track.stop());
-      }
-      errorMsg.textContent = "";
-      const deviceId = cameraSelect.value;
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: { deviceId: deviceId ? { exact: deviceId } : undefined, width: 812, height: 339 },
-        });
-        currentStream = stream;
-        video.srcObject = stream;
-        await video.play();
-        streaming = true;
-        initOpenCV();
-        initThreeJS();
-        requestAnimationFrame(processFrame);
-      } catch (err) {
-        errorMsg.textContent = `Error accessing camera: ${err.message}`;
-        console.error(err);
-      }
-    }
+  // New: track which marker is being edited, or null if none
+  let editingId = null;
 
-    function initOpenCV() {
-      if (cap) cap.delete();
-      if (srcMat) srcMat.delete();
-      if (grayMat) grayMat.delete();
-      if (ids) ids.delete();
-      if (corners) corners.delete();
-      if (rejected) rejected.delete();
-      if (rvecs) rvecs.delete();
-      if (tvecs) tvecs.delete();
+  // Track latest marker info data so we can show if marker disappears
+  const lastMarkerData = {};
 
-      cap = new cv.VideoCapture(video);
-      srcMat = new cv.Mat(video.videoHeight, video.videoWidth, cv.CV_8UC4);
-      grayMat = new cv.Mat(video.videoHeight, video.videoWidth, cv.CV_8UC1);
+  async function listCameras() {
+    try {
+      const tempStream = await navigator.mediaDevices.getUserMedia({ video: true });
+      tempStream.getTracks().forEach(t => t.stop());
 
-      if (cv.aruco.getPredefinedDictionary) {
-        dictionary = cv.aruco.getPredefinedDictionary(cv.aruco.DICT_6X6_250);
-      } else if (cv.aruco_Dictionary) {
-        dictionary = new cv.aruco_Dictionary(cv.aruco.DICT_6X6_250);
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      const videoDevices = devices.filter(d => d.kind === 'videoinput');
+
+      cameraSelect.innerHTML = '';
+      videoDevices.forEach((device, i) => {
+        const option = document.createElement('option');
+        option.value = device.deviceId;
+        option.text = device.label || `Camera ${i + 1}`;
+        cameraSelect.appendChild(option);
+      });
+
+      if (videoDevices.length > 0) {
+        startStream(videoDevices[0].deviceId);
       } else {
-        alert("ArUco dictionary function not available in this OpenCV.js build");
-        return;
+        alert('No cameras found');
       }
-      parameters = new cv.aruco_DetectorParameters();
-      ids = new cv.Mat();
-      corners = new cv.MatVector();
-      rejected = new cv.MatVector();
-      rvecs = new cv.Mat();
-      tvecs = new cv.Mat();
+    } catch (err) {
+      alert('Could not access cameras: ' + err.message);
     }
+  }
 
-    function initThreeJS() {
-      // Setup three.js scene, camera, renderer
-      if (renderer) {
-        renderer.dispose();
-        renderer.forceContextLoss();
-        renderer.context = null;
-        renderer.domElement = null;
+  async function startStream(deviceId) {
+    if (currentStream) {
+      currentStream.getTracks().forEach(t => t.stop());
+    }
+    try {
+      const constraints = { video: { deviceId: { exact: deviceId } } };
+      const stream = await navigator.mediaDevices.getUserMedia(constraints);
+      currentStream = stream;
+      video.srcObject = stream;
+
+      video.onloadedmetadata = () => {
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+      };
+
+      markerStatus.clear();
+      detectedIds.clear();
+      clearMarkerInfo();
+    } catch (err) {
+      alert('Could not start camera: ' + err.message);
+    }
+  }
+
+  cameraSelect.addEventListener('change', () => {
+    startStream(cameraSelect.value);
+  });
+
+  function clearMarkerInfo() {
+    if (editingId === null) {
+      markerInfo.innerHTML = `<p>No markers detected yet. Point your camera at an ArUco marker!</p>`;
+      hideEditForm();
+    }
+  }
+
+  function drawMarkers(markers) {
+    markers.forEach(marker => {
+      const corners = marker.corners;
+      const id = Number(marker.id);
+      let color = '#f44336'; // red by default = error/unknown
+
+      if (markerStatus.has(id)) {
+        const status = markerStatus.get(id);
+        if (status === 1) color = '#4CAF50';     // green = has content
+        else if (status === 0) color = '#FF9800'; // orange = no content
       }
 
-      renderer = new THREE.WebGLRenderer({ canvas: threeCanvas, alpha: true, antialias: true });
-      renderer.setSize(812, 339);
-      renderer.setClearColor(0x000000, 0); // transparent
+      ctx.beginPath();
+      ctx.moveTo(corners[0].x, corners[0].y);
+      for (let i = 1; i < corners.length; i++) {
+        ctx.lineTo(corners[i].x, corners[i].y);
+      }
+      ctx.closePath();
 
-      scene = new THREE.Scene();
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 4;
+      ctx.shadowColor = color + '99'; // semi-transparent shadow
+      ctx.shadowBlur = 8;
+      ctx.stroke();
+      ctx.shadowBlur = 0;
 
-      // FOV, aspect, near, far should be set close to your real camera parameters
-      camera3D = new THREE.PerspectiveCamera(40, 812 / 339, 0.01, 1000);
-      camera3D.position.set(0, 0, 1);
+      const cx = (corners[0].x + corners[2].x) / 2;
+      const cy = (corners[0].y + corners[2].y) / 2;
+      ctx.fillStyle = '#eee';
+      ctx.font = '24px "Segoe UI", Tahoma, Geneva, Verdana, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(`ID: ${marker.id}`, cx, cy - 10);
+    });
+  }
 
-      // Simple cube to show on marker
-      const geometry = new THREE.BoxGeometry(0.2, 0.2, 0.2);
-      const material = new THREE.MeshNormalMaterial();
-      cube = new THREE.Mesh(geometry, material);
-      scene.add(cube);
-      cube.visible = false;
+  // Fetch marker data only if not editing this marker
+  function fetchMarkerContent(id) {
+  if (editingId === id) {
+    // Don't overwrite while editing
+    return;
+  }
+
+  fetch(`/marker_content/${id}`)
+    .then(res => {
+      if (!res.ok) {
+        // If 404 or other error, create empty data
+        return { info: '', content: [] };
+      }
+      return res.json();
+    })
+    .then(data => {
+      if (data && Array.isArray(data.content)) {
+        markerStatus.set(Number(id), data.content.length > 0 ? 1 : 0);
+        lastMarkerData[id] = data; // save latest data
+        if (editingId !== id) {
+          displayMarkerInfo(id, data);
+        }
+      } else {
+        // No valid data, treat as empty
+        markerStatus.set(Number(id), 0);
+        lastMarkerData[id] = { info: '', content: [] };
+        if (editingId !== id) {
+          displayMarkerInfo(id, lastMarkerData[id]);
+        }
+      }
+    })
+    .catch(err => {
+      console.error(`Failed to fetch content for marker ${id}:`, err);
+      markerStatus.set(Number(id), 0);
+      lastMarkerData[id] = { info: '', content: [] };
+      if (editingId !== id) {
+        displayMarkerInfo(id, lastMarkerData[id]);
+      }
+    });
+}
+
+  function displayMarkerInfo(id, data) {
+  if (editingId === id) {
+    // If editing, skip update to not overwrite user input
+    return;
+  }
+
+  if (!data || data.error) {
+    // Show default message if no data
+    markerInfo.innerHTML = `<h3>Marker ID: ${id}</h3><p>No data found. You can add info below.</p>`;
+    addEditButton(id);
+    hideEditForm();
+    return;
+  }
+
+  let html = `<h3>Marker ID: ${id}</h3>`;
+  if (data.info) {
+    html += `<p>${escapeHtml(data.info)}</p>`;
+  }
+  if (data.content && data.content.length > 0) {
+    html += `<ul>`;
+    for (const item of data.content) {
+      html += `<li>${escapeHtml(item)}</li>`;
     }
+    html += `</ul>`;
+  } else if (data.content && data.content.length === 0) {
+    html += `<p><em>No content items for this marker.</em></p>`;
+  }
 
-    // Converts rotation vector + translation vector to THREE.js matrix4
-    function buildPoseMatrix(rvec, tvec) {
-      // Convert rotation vector to rotation matrix (Rodrigues)
-      let rmat = new cv.Mat();
-      cv.Rodrigues(rvec, rmat);
+  markerInfo.innerHTML = html;
+  addEditButton(id);
+  hideEditForm();
+}
 
-      // 3x3 rotation matrix
-      let mat = new THREE.Matrix4();
+  // Escape HTML to avoid injection
+  function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+  }
 
-      // Copy rotation values (rmat is 3x3, in float64)
-      const rotation = new Float32Array([
-        rmat.data64F[0], rmat.data64F[3], rmat.data64F[6], 0,
-        rmat.data64F[1], rmat.data64F[4], rmat.data64F[7], 0,
-        rmat.data64F[2], rmat.data64F[5], rmat.data64F[8], 0,
-        0, 0, 0, 1,
-      ]);
+  // Show edit form with current marker data prefilled
+  function showEditForm(id) {
+    editingId = id;
+    const data = lastMarkerData[id];
+    if (!data) return;
 
-      mat.fromArray(rotation);
+    infoInput.value = data.info || '';
+    contentInput.value = (data.content || []).join('\n');
 
-      // Set translation
-      mat.setPosition(new THREE.Vector3(tvec.data64F[0], tvec.data64F[1], tvec.data64F[2]));
+    editForm.style.display = 'flex';
+  }
 
-      rmat.delete();
+  function hideEditForm() {
+    editingId = null;
+    editForm.style.display = 'none';
+  }
 
-      return mat;
+  saveBtn.addEventListener('click', () => {
+    if (editingId === null) return;
+
+    const updatedData = {
+      info: infoInput.value.trim(),
+      content: contentInput.value.split('\n').map(s => s.trim()).filter(s => s.length > 0)
+    };
+
+    fetch(`/marker_content/${editingId}`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(updatedData)
+    })
+    .then(res => {
+      if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+      return res.json();
+    })
+    .then(data => {
+      markerStatus.set(editingId, data.content.length > 0 ? 1 : 0);
+      lastMarkerData[editingId] = data;
+      displayMarkerInfo(editingId, data);
+      hideEditForm();
+    })
+    .catch(err => {
+      alert('Failed to save marker data: ' + err.message);
+    });
+  });
+
+  cancelBtn.addEventListener('click', () => {
+    if (editingId !== null) {
+      displayMarkerInfo(editingId, lastMarkerData[editingId]);
+      hideEditForm();
     }
+  });
 
-    function processFrame() {
-      if (!streaming) return;
+  // Add "Edit" button below marker info when marker is detected
+  function addEditButton(id) {
+    if (editingId === id) return; // already editing
 
-      try {
-        cap.read(srcMat);
-        cv.cvtColor(srcMat, grayMat, cv.COLOR_RGBA2GRAY);
+    // Remove old edit button if exists
+    const oldBtn = document.getElementById('editMarkerBtn');
+    if (oldBtn) oldBtn.remove();
 
-        // Detect markers + pose estimation
-        cv.aruco.detectMarkers(grayMat, dictionary, corners, ids, parameters, rejected);
+    const btn = document.createElement('button');
+    btn.id = 'editMarkerBtn';
+    btn.textContent = 'Edit Marker';
+    btn.style.marginTop = '0.5rem';
+    btn.style.padding = '0.4rem 1rem';
+    btn.style.cursor = 'pointer';
+    btn.style.borderRadius = '6px';
+    btn.style.border = 'none';
+    btn.style.backgroundColor = '#f5a623';
+    btn.style.color = '#121212';
+    btn.addEventListener('click', () => showEditForm(id));
+    markerInfo.appendChild(btn);
+  }
 
-        arucoCtx.clearRect(0, 0, arucoCanvas.width, arucoCanvas.height);
-        arucoCtx.drawImage(video, 0, 0, arucoCanvas.width, arucoCanvas.height);
+  // Main animation loop
+  function tick() {
+    if (video.readyState === video.HAVE_ENOUGH_DATA) {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-        if (ids.rows > 0) {
-          // Draw detected markers on canvas
-          cv.aruco.drawDetectedMarkers(srcMat, corners, ids);
+      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      const markers = detector.detect(imageData);
+      drawMarkers(markers);
 
-          // Estimate pose for each marker
-          // Camera matrix + distortion coeffs should be calibrated for your camera for best results
-          // Here we use some default-ish calibration values, tweak for your device
-          const cameraMatrix = cv.matFromArray(3, 3, cv.CV_64F, [
-            812, 0, 812 / 2,
-            0, 812, 339 / 2,
-            0, 0, 1,
-          ]);
-          const distCoeffs = cv.Mat.zeros(5, 1, cv.CV_64F);
+      frameCount++;
+      if (frameCount > 50) frameCount = 0;
 
-          cv.aruco.estimatePoseSingleMarkers(corners, 0.1, cameraMatrix, distCoeffs, rvecs, tvecs);
-
-          // For demo, use only first detected marker's pose to place cube
-          if (ids.rows > 0) {
-            const rvec = new cv.Mat();
-            const tvec = new cv.Mat();
-
-            rvec = rvecs.row(0);
-            tvec = tvecs.row(0);
-
-            // Build transformation matrix for three.js
-            const poseMat = buildPoseMatrix(rvec, tvec);
-
-            // Apply pose matrix to cube
-            cube.visible = true;
-            cube.matrixAutoUpdate = false;
-            cube.matrix.copy(poseMat);
-
-            rvec.delete();
-            tvec.delete();
+      if (markers.length > 0) {
+        markers.forEach(marker => {
+          const id = Number(marker.id);
+          if (!detectedIds.has(id) || frameCount === 0) {
+            fetchMarkerContent(id);
+            detectedIds.add(id);
           }
+        });
 
-          cameraMatrix.delete();
-          distCoeffs.delete();
-        } else {
-          cube.visible = false;
+        // Show info of the first detected marker if not editing any
+        if (editingId === null) {
+          const firstId = Number(markers[0].id);
+          if (lastMarkerData[firstId]) {
+            displayMarkerInfo(firstId, lastMarkerData[firstId]);
+            addEditButton(firstId);
+          }
         }
-
-        cv.imshow("arucoCanvas", srcMat);
-
-        renderer.render(scene, camera3D);
-      } catch (e) {
-        console.error(e);
+      } else {
+        // No markers detected
+        if (editingId === null) {
+          clearMarkerInfo();
+        }
       }
-
-      requestAnimationFrame(processFrame);
     }
 
-    function onOpenCvReady() {
-      console.log("OpenCV.js ready");
+    requestAnimationFrame(tick);
+  }
 
-      (async () => {
-        try {
-          await navigator.mediaDevices.getUserMedia({ video: true });
-        } catch (e) {
-          console.warn("Camera access denied or not granted");
-        }
+  // Start everything
+  listCameras().then(() => {
+    requestAnimationFrame(tick);
+  });
+</script>
 
-        await listCameras();
-
-        if (cameraSelect.options.length) {
-          startStream();
-        } else {
-          errorMsg.textContent = "No cameras found.";
-        }
-      })();
-    }
-
-    cameraSelect.addEventListener("change", startStream);
-  </script>
 </body>
-
 </html>
