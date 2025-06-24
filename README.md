@@ -31,6 +31,8 @@ Accessible on the local network.
 
 3. Open another terminal and forward the local server through Ngrok:
 
+    > Use Ngrok so we don't have to play with https certificates due to camera access :3
+
     ```bash
     ngrok http 8000 --basic-auth="user:password"
     ```
