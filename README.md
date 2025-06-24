@@ -38,3 +38,10 @@ Accessible on the local network.
     ```
 
     > I recommend at least to use a basic authentification for security.
+
+4. To use the app:
+
+    Print some original Aruco markers that you can find at the [Aruco marker generator](https://chev.me/arucogen/)
+    Go to the Ngrok-provided URL in your browser and start using the app!
+
+    > make sure to choose the "Original ArUco" Dictionnary
