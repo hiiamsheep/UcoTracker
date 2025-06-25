@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <title>UcoTracker</title>
@@ -17,6 +18,7 @@
       padding: 1rem;
       box-sizing: border-box;
     }
+
     header {
       margin-bottom: 1rem;
       width: 100%;
@@ -26,9 +28,11 @@
       gap: 0.5rem;
       font-size: 1.1rem;
     }
+
     label {
       font-weight: 600;
     }
+
     select {
       padding: 0.4rem 0.8rem;
       font-size: 1rem;
@@ -39,11 +43,14 @@
       cursor: pointer;
       transition: background-color 0.2s ease;
     }
-    select:hover, select:focus {
+
+    select:hover,
+    select:focus {
       background-color: #333;
       outline: none;
     }
-    #videoContainer {
+
+    /* #videoContainer {
       position: relative;
       width: 100%;
       max-width: 640px;
@@ -63,7 +70,38 @@
       user-select: none;
       pointer-events: none;
       border-radius: 8px;
+    } */
+    #videoContainer {
+      position: relative;
+      width: 90vw;
+      /* plus petit que 100% */
+      max-width: 480px;
+      /* limite sur desktop */
+      max-height: 60vh;
+      /* limite la hauteur sur mobile */
+      margin: 0 auto;
+      background-color: #000;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 0 20px rgba(0, 0, 0, 0.7);
     }
+
+    video,
+    canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      user-select: none;
+      pointer-events: none;
+      border-radius: 8px;
+    }
+
+    video {
+      opacity: 0.01;
+    }
+
     #markerInfo {
       margin-top: 1rem;
       max-width: 640px;
@@ -74,35 +112,42 @@
       min-height: 80px;
       position: relative;
     }
+
     #markerInfo h3 {
       margin-top: 0;
       font-size: 1.4rem;
       color: #f5a623;
     }
+
     #markerInfo p {
       font-size: 1rem;
       line-height: 1.4;
       margin-bottom: 1rem;
       white-space: pre-wrap;
     }
+
     #markerInfo ul {
       padding-left: 1.2rem;
       margin: 0;
     }
+
     #markerInfo ul li {
       margin-bottom: 0.3rem;
       font-size: 1rem;
     }
+
     #cancelBtn {
       background: #555;
       color: #eee;
     }
+
     #editForm {
       margin-top: 1rem;
       display: none;
       flex-direction: column;
       gap: 0.5rem;
     }
+
     #editForm textarea {
       width: 100%;
       min-height: 60px;
@@ -113,6 +158,7 @@
       padding: 0.5rem;
       resize: vertical;
     }
+
     #editForm input[type="text"] {
       width: 100%;
       font-size: 1rem;
@@ -120,6 +166,7 @@
       border: none;
       padding: 0.4rem 0.6rem;
     }
+
     #editForm button {
       padding: 0.5rem 1rem;
       font-size: 1rem;
@@ -131,374 +178,389 @@
       font-weight: 600;
       transition: background-color 0.2s ease;
     }
+
     #editForm button:hover {
       background-color: #d18e00;
     }
+
     @media (max-width: 500px) {
       body {
         padding: 0.5rem;
       }
+
       header {
         font-size: 1rem;
       }
+
       #markerInfo {
         padding: 1rem;
       }
     }
   </style>
 </head>
+
 <body>
 
-<header>
-  <label for="cameraSelect">Choose your camera:</label>
-  <select id="cameraSelect" aria-label="Camera selection"></select>
-</header>
+  <header>
+    <label for="cameraSelect">Choose your camera:</label>
+    <select id="cameraSelect" aria-label="Camera selection"></select>
+  </header>
 
-<main id="videoContainer">
-  <video id="video" autoplay muted playsinline></video>
-  <canvas id="canvas"></canvas>
-</main>
+  <main id="videoContainer">
+    <video id="video" autoplay muted playsinline></video>
+    <canvas id="canvas"></canvas>
+  </main>
 
-<section id="markerInfo" aria-live="polite" aria-atomic="true" role="region">
-  <p>No markers detected yet. Point your camera at an ArUco marker!</p>
-</section>
+  <section id="markerInfo" aria-live="polite" aria-atomic="true" role="region">
+    <p>No markers detected yet. Point your camera at an ArUco marker!</p>
+  </section>
 
-<!-- Edit form -->
-<section id="editForm">
-  <label for="infoInput">Description:</label>
-  <textarea id="infoInput" rows="3"></textarea>
+  <!-- Edit form -->
+  <section id="editForm">
+    <label for="infoInput">Description:</label>
+    <textarea id="infoInput" rows="3"></textarea>
 
-  <label for="contentInput">Content items (one per line):</label>
-  <textarea id="contentInput" rows="4"></textarea>
+    <label for="contentInput">Content items (one per line):</label>
+    <textarea id="contentInput" rows="4"></textarea>
 
-  <button id="saveBtn" type="button">Save</button>
-  <button id="cancelBtn" type="button">Cancel</button>
-</section>
+    <button id="saveBtn" type="button">Save</button>
+    <button id="cancelBtn" type="button">Cancel</button>
+  </section>
 
-<script src="cv.js"></script>
-<script src="aruco.js"></script>
+  <script src="cv.js"></script>
+  <script src="aruco.js"></script>
 
-<script>
-  const video = document.getElementById('video');
-  const canvas = document.getElementById('canvas');
-  const ctx = canvas.getContext('2d');
-  const cameraSelect = document.getElementById('cameraSelect');
-  const markerInfo = document.getElementById('markerInfo');
+  <script>
+    const video = document.getElementById('video');
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    const cameraSelect = document.getElementById('cameraSelect');
+    const markerInfo = document.getElementById('markerInfo');
 
-  const editForm = document.getElementById('editForm');
-  const infoInput = document.getElementById('infoInput');
-  const contentInput = document.getElementById('contentInput');
-  const saveBtn = document.getElementById('saveBtn');
-  const cancelBtn = document.getElementById('cancelBtn');
+    const editForm = document.getElementById('editForm');
+    const infoInput = document.getElementById('infoInput');
+    const contentInput = document.getElementById('contentInput');
+    const saveBtn = document.getElementById('saveBtn');
+    const cancelBtn = document.getElementById('cancelBtn');
 
-  let currentStream = null;
-  const detector = new AR.Detector();
-  const markerStatus = new Map(); // id → status: 1=green,0=orange,-1=red
-  let detectedIds = new Set();
-  let frameCount = 0;
+    let currentStream = null;
+    const detector = new AR.Detector();
+    const markerStatus = new Map(); // id → status: 1=green,0=orange,-1=red
+    let detectedIds = new Set();
+    let frameCount = 0;
 
-  // New: track which marker is being edited, or null if none
-  let editingId = null;
+    let editingId = null;
 
-  // Track latest marker info data so we can show if marker disappears
-  const lastMarkerData = {};
+    const lastMarkerData = {};
 
-  async function listCameras() {
-    try {
-      const tempStream = await navigator.mediaDevices.getUserMedia({ video: true });
-      tempStream.getTracks().forEach(t => t.stop());
+    async function listCameras() {
+      try {
+        const tempStream = await navigator.mediaDevices.getUserMedia({ video: true });
+        tempStream.getTracks().forEach(t => t.stop());
 
-      const devices = await navigator.mediaDevices.enumerateDevices();
-      const videoDevices = devices.filter(d => d.kind === 'videoinput');
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const videoDevices = devices.filter(d => d.kind === 'videoinput');
 
-      cameraSelect.innerHTML = '';
-      videoDevices.forEach((device, i) => {
-        const option = document.createElement('option');
-        option.value = device.deviceId;
-        option.text = device.label || `Camera ${i + 1}`;
-        cameraSelect.appendChild(option);
-      });
-
-      if (videoDevices.length > 0) {
-        startStream(videoDevices[0].deviceId);
-      } else {
-        alert('No cameras found');
-      }
-    } catch (err) {
-      alert('Could not access cameras: ' + err.message);
-    }
-  }
-
-  async function startStream(deviceId) {
-    if (currentStream) {
-      currentStream.getTracks().forEach(t => t.stop());
-    }
-    try {
-      const constraints = { video: { deviceId: { exact: deviceId } } };
-      const stream = await navigator.mediaDevices.getUserMedia(constraints);
-      currentStream = stream;
-      video.srcObject = stream;
-
-      video.onloadedmetadata = () => {
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
-      };
-
-      markerStatus.clear();
-      detectedIds.clear();
-      clearMarkerInfo();
-    } catch (err) {
-      alert('Could not start camera: ' + err.message);
-    }
-  }
-
-  cameraSelect.addEventListener('change', () => {
-    startStream(cameraSelect.value);
-  });
-
-  function clearMarkerInfo() {
-    if (editingId === null) {
-      markerInfo.innerHTML = `<p>No markers detected yet. Point your camera at an ArUco marker!</p>`;
-      hideEditForm();
-    }
-  }
-
-  function drawMarkers(markers) {
-    markers.forEach(marker => {
-      const corners = marker.corners;
-      const id = Number(marker.id);
-      let color = '#f44336'; // red by default = error/unknown
-
-      if (markerStatus.has(id)) {
-        const status = markerStatus.get(id);
-        if (status === 1) color = '#4CAF50';     // green = has content
-        else if (status === 0) color = '#FF9800'; // orange = no content
-      }
-
-      ctx.beginPath();
-      ctx.moveTo(corners[0].x, corners[0].y);
-      for (let i = 1; i < corners.length; i++) {
-        ctx.lineTo(corners[i].x, corners[i].y);
-      }
-      ctx.closePath();
-
-      ctx.strokeStyle = color;
-      ctx.lineWidth = 4;
-      ctx.shadowColor = color + '99'; // semi-transparent shadow
-      ctx.shadowBlur = 8;
-      ctx.stroke();
-      ctx.shadowBlur = 0;
-
-      const cx = (corners[0].x + corners[2].x) / 2;
-      const cy = (corners[0].y + corners[2].y) / 2;
-      ctx.fillStyle = '#eee';
-      ctx.font = '24px "Segoe UI", Tahoma, Geneva, Verdana, sans-serif';
-      ctx.textAlign = 'center';
-      ctx.fillText(`ID: ${marker.id}`, cx, cy - 10);
-    });
-  }
-
-  // Fetch marker data only if not editing this marker
-  function fetchMarkerContent(id) {
-  if (editingId === id) {
-    // Don't overwrite while editing
-    return;
-  }
-
-  fetch(`/marker_content/${id}`)
-    .then(res => {
-      if (!res.ok) {
-        // If 404 or other error, create empty data
-        return { info: '', content: [] };
-      }
-      return res.json();
-    })
-    .then(data => {
-      if (data && Array.isArray(data.content)) {
-        markerStatus.set(Number(id), data.content.length > 0 ? 1 : 0);
-        lastMarkerData[id] = data; // save latest data
-        if (editingId !== id) {
-          displayMarkerInfo(id, data);
-        }
-      } else {
-        // No valid data, treat as empty
-        markerStatus.set(Number(id), 0);
-        lastMarkerData[id] = { info: '', content: [] };
-        if (editingId !== id) {
-          displayMarkerInfo(id, lastMarkerData[id]);
-        }
-      }
-    })
-    .catch(err => {
-      console.error(`Failed to fetch content for marker ${id}:`, err);
-      markerStatus.set(Number(id), 0);
-      lastMarkerData[id] = { info: '', content: [] };
-      if (editingId !== id) {
-        displayMarkerInfo(id, lastMarkerData[id]);
-      }
-    });
-}
-
-  function displayMarkerInfo(id, data) {
-  if (editingId === id) {
-    // If editing, skip update to not overwrite user input
-    return;
-  }
-
-  if (!data || data.error) {
-    // Show default message if no data
-    markerInfo.innerHTML = `<h3>Marker ID: ${id}</h3><p>No data found. You can add info below.</p>`;
-    addEditButton(id);
-    hideEditForm();
-    return;
-  }
-
-  let html = `<h3>Marker ID: ${id}</h3>`;
-  if (data.info) {
-    html += `<p>${escapeHtml(data.info)}</p>`;
-  }
-  if (data.content && data.content.length > 0) {
-    html += `<ul>`;
-    for (const item of data.content) {
-      html += `<li>${escapeHtml(item)}</li>`;
-    }
-    html += `</ul>`;
-  } else if (data.content && data.content.length === 0) {
-    html += `<p><em>No content items for this marker.</em></p>`;
-  }
-
-  markerInfo.innerHTML = html;
-  addEditButton(id);
-  hideEditForm();
-}
-
-  // Escape HTML to avoid injection
-  function escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-  }
-
-  // Show edit form with current marker data prefilled
-  function showEditForm(id) {
-    editingId = id;
-    const data = lastMarkerData[id];
-    if (!data) return;
-
-    infoInput.value = data.info || '';
-    contentInput.value = (data.content || []).join('\n');
-
-    editForm.style.display = 'flex';
-  }
-
-  function hideEditForm() {
-    editingId = null;
-    editForm.style.display = 'none';
-  }
-
-  saveBtn.addEventListener('click', () => {
-    if (editingId === null) return;
-
-    const updatedData = {
-      info: infoInput.value.trim(),
-      content: contentInput.value.split('\n').map(s => s.trim()).filter(s => s.length > 0)
-    };
-
-    fetch(`/marker_content/${editingId}`, {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify(updatedData)
-    })
-    .then(res => {
-      if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
-      return res.json();
-    })
-    .then(data => {
-      markerStatus.set(editingId, data.content.length > 0 ? 1 : 0);
-      lastMarkerData[editingId] = data;
-      displayMarkerInfo(editingId, data);
-      hideEditForm();
-    })
-    .catch(err => {
-      alert('Failed to save marker data: ' + err.message);
-    });
-  });
-
-  cancelBtn.addEventListener('click', () => {
-    if (editingId !== null) {
-      displayMarkerInfo(editingId, lastMarkerData[editingId]);
-      hideEditForm();
-    }
-  });
-
-  // Add "Edit" button below marker info when marker is detected
-  function addEditButton(id) {
-    if (editingId === id) return; // already editing
-
-    // Remove old edit button if exists
-    const oldBtn = document.getElementById('editMarkerBtn');
-    if (oldBtn) oldBtn.remove();
-
-    const btn = document.createElement('button');
-    btn.id = 'editMarkerBtn';
-    btn.textContent = 'Edit Marker';
-    btn.style.marginTop = '0.5rem';
-    btn.style.padding = '0.4rem 1rem';
-    btn.style.cursor = 'pointer';
-    btn.style.borderRadius = '6px';
-    btn.style.border = 'none';
-    btn.style.backgroundColor = '#f5a623';
-    btn.style.color = '#121212';
-    btn.addEventListener('click', () => showEditForm(id));
-    markerInfo.appendChild(btn);
-  }
-
-  // Main animation loop
-  function tick() {
-    if (video.readyState === video.HAVE_ENOUGH_DATA) {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-      const markers = detector.detect(imageData);
-      drawMarkers(markers);
-
-      frameCount++;
-      if (frameCount > 50) frameCount = 0;
-
-      if (markers.length > 0) {
-        markers.forEach(marker => {
-          const id = Number(marker.id);
-          if (!detectedIds.has(id) || frameCount === 0) {
-            fetchMarkerContent(id);
-            detectedIds.add(id);
-          }
+        cameraSelect.innerHTML = '';
+        videoDevices.forEach((device, i) => {
+          const option = document.createElement('option');
+          option.value = device.deviceId;
+          option.text = device.label || `Camera ${i + 1}`;
+          cameraSelect.appendChild(option);
         });
 
-        // Show info of the first detected marker if not editing any
-        if (editingId === null) {
-          const firstId = Number(markers[0].id);
-          if (lastMarkerData[firstId]) {
-            displayMarkerInfo(firstId, lastMarkerData[firstId]);
-            addEditButton(firstId);
-          }
+        if (videoDevices.length > 0) {
+          startStream(videoDevices[0].deviceId);
+        } else {
+          alert('No cameras found');
         }
-      } else {
-        // No markers detected
-        if (editingId === null) {
-          clearMarkerInfo();
-        }
+      } catch (err) {
+        alert('Could not access cameras: ' + err.message);
       }
     }
 
-    requestAnimationFrame(tick);
-  }
+    async function startStream(deviceId) {
+      if (currentStream) {
+        currentStream.getTracks().forEach(t => t.stop());
+      }
+      try {
+        const constraints = { video: { deviceId: { exact: deviceId } } };
+        const stream = await navigator.mediaDevices.getUserMedia(constraints);
+        currentStream = stream;
+        video.srcObject = stream;
 
-  // Start everything
-  listCameras().then(() => {
-    requestAnimationFrame(tick);
-  });
-</script>
+        video.onloadedmetadata = () => {
+          canvas.width = video.videoWidth;
+          canvas.height = video.videoHeight;
+        };
+
+        markerStatus.clear();
+        detectedIds.clear();
+        clearMarkerInfo();
+      } catch (err) {
+        alert('Could not start camera: ' + err.message);
+      }
+    }
+
+    cameraSelect.addEventListener('change', () => {
+      startStream(cameraSelect.value);
+    });
+
+    function clearMarkerInfo() {
+      if (editingId === null) {
+        markerInfo.innerHTML = `<p>No markers detected yet. Point your camera at an ArUco marker!</p>`;
+        hideEditForm();
+      }
+    }
+
+    function drawMarkers(markers) {
+      markers.forEach(marker => {
+        const corners = marker.corners;
+        const id = Number(marker.id);
+        let color = '#f44336';                        // red by default = error/unknown
+
+        if (markerStatus.has(id)) {
+          const status = markerStatus.get(id);
+          if (status === 1) color = '#4CAF50';        // green = has content
+          else if (status === 0) color = '#FF9800';   // orange = no content
+        }
+
+        ctx.beginPath();
+        ctx.moveTo(corners[0].x, corners[0].y);
+        for (let i = 1; i < corners.length; i++) {
+          ctx.lineTo(corners[i].x, corners[i].y);
+        }
+        ctx.closePath();
+
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 4;
+        ctx.shadowColor = color + '99'; // semi-transparent shadow
+        ctx.shadowBlur = 8;
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+
+        const cx = (corners[0].x + corners[2].x) / 2;
+        const cy = (corners[0].y + corners[2].y) / 2;
+        ctx.fillStyle = '#eee';
+        ctx.font = '24px "Segoe UI", Tahoma, Geneva, Verdana, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(`ID: ${marker.id}`, cx, cy - 10);
+      });
+    }
+
+    function fetchMarkerContent(id) {
+      if (editingId === id) {
+        // Don't overwrite while editing
+        return;
+      }
+
+      fetch(`/marker_content/${id}`)
+        .then(res => {
+          if (!res.ok) {
+            // If 404 or other error, create empty data
+            return { info: '', content: [] };
+          }
+          return res.json();
+        })
+        .then(data => {
+          if (data && Array.isArray(data.content)) {
+            markerStatus.set(Number(id), data.content.length > 0 ? 1 : 0);
+            lastMarkerData[id] = data; // save latest data
+            if (editingId !== id) {
+              displayMarkerInfo(id, data);
+            }
+          } else {
+            // No valid data, treat as empty
+            markerStatus.set(Number(id), 0);
+            lastMarkerData[id] = { info: '', content: [] };
+            if (editingId !== id) {
+              displayMarkerInfo(id, lastMarkerData[id]);
+            }
+          }
+        })
+        .catch(err => {
+          console.error(`Failed to fetch content for marker ${id}:`, err);
+          markerStatus.set(Number(id), 0);
+          lastMarkerData[id] = { info: '', content: [] };
+          if (editingId !== id) {
+            displayMarkerInfo(id, lastMarkerData[id]);
+          }
+        });
+    }
+
+    function displayMarkerInfo(id, data) {
+      if (editingId === id) {
+        // If editing, skip update to not overwrite user input
+        return;
+      }
+
+      if (!data || data.error) {
+        // Show default message if no data
+        markerInfo.innerHTML = `<h3>Marker ID: ${id}</h3><p>No data found. You can add info below.</p>`;
+        addEditButton(id);
+        hideEditForm();
+        return;
+      }
+
+      let html = `<h3>Marker ID: ${id}</h3>`;
+      if (data.info) {
+        html += `<p>${escapeHtml(data.info)}</p>`;
+      }
+      if (data.content && data.content.length > 0) {
+        html += `<ul>`;
+        for (const item of data.content) {
+          html += `<li>${escapeHtml(item)}</li>`;
+        }
+        html += `</ul>`;
+      } else if (data.content && data.content.length === 0) {
+        html += `<p><em>No content items for this marker.</em></p>`;
+      }
+
+      markerInfo.innerHTML = html;
+      addEditButton(id);
+      hideEditForm();
+    }
+
+    // Escape HTML to avoid injection lol
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    // Show edit form with current marker data prefilled
+    function showEditForm(id) {
+      editingId = id;
+      const data = lastMarkerData[id];
+      if (!data) return;
+
+      infoInput.value = data.info || '';
+      contentInput.value = (data.content || []).join('\n');
+
+      editForm.style.display = 'flex';
+    }
+
+    function hideEditForm() {
+      editingId = null;
+      editForm.style.display = 'none';
+    }
+
+    saveBtn.addEventListener('click', () => {
+      if (editingId === null) return;
+
+      const updatedData = {
+        info: infoInput.value.trim(),
+        content: contentInput.value.split('\n').map(s => s.trim()).filter(s => s.length > 0)
+      };
+
+      fetch(`/marker_content/${editingId}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updatedData)
+      })
+        .then(res => {
+          if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+          return res.json();
+        })
+        .then(data => {
+          markerStatus.set(editingId, data.content.length > 0 ? 1 : 0);
+          lastMarkerData[editingId] = data;
+          displayMarkerInfo(editingId, data);
+          hideEditForm();
+        })
+        .catch(err => {
+          alert('Failed to save marker data: ' + err.message);
+        });
+    });
+
+    cancelBtn.addEventListener('click', () => {
+      if (editingId !== null) {
+        displayMarkerInfo(editingId, lastMarkerData[editingId]);
+        hideEditForm();
+      }
+    });
+
+    // Add "Edit" button below marker info when marker is detected
+    function addEditButton(id) {
+      if (editingId === id) return; // already editing, skip
+
+      // Remove old edit button if exists
+      const oldBtn = document.getElementById('editMarkerBtn');
+      if (oldBtn) oldBtn.remove();
+
+      const btn = document.createElement('button');
+      btn.id = 'editMarkerBtn';
+      btn.textContent = 'Edit Marker';
+      btn.style.marginTop = '0.5rem';
+      btn.style.padding = '0.4rem 1rem';
+      btn.style.cursor = 'pointer';
+      btn.style.borderRadius = '6px';
+      btn.style.border = 'none';
+      btn.style.backgroundColor = '#f5a623';
+      btn.style.color = '#121212';
+      btn.addEventListener('click', () => showEditForm(id));
+      markerInfo.appendChild(btn);
+    }
+
+    // Main loop
+    function tick() {
+      if (video.readyState === video.HAVE_ENOUGH_DATA) {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const markers = detector.detect(imageData);
+        drawMarkers(markers);
+
+        frameCount++;
+        if (frameCount > 50) frameCount = 0;
+
+        if (markers.length > 0) {
+          markers.forEach(marker => {
+            const id = Number(marker.id);
+            if (!detectedIds.has(id) || frameCount === 0) {
+              fetchMarkerContent(id);
+              detectedIds.add(id);
+            }
+          });
+
+          // Show info of the first detected marker if not editing any
+          if (editingId === null) {
+            const firstId = Number(markers[0].id);
+            if (lastMarkerData[firstId]) {
+              displayMarkerInfo(firstId, lastMarkerData[firstId]);
+              addEditButton(firstId);
+            }
+          }
+        } else {
+          // No markers detected
+          if (editingId === null) {
+            clearMarkerInfo();
+          }
+        }
+      }
+
+      requestAnimationFrame(tick);
+    }
+
+    function updateContainerAspect() {
+      if (video.videoWidth && video.videoHeight) {
+        const container = document.getElementById('videoContainer');
+        const ratio = video.videoWidth / video.videoHeight;
+        container.style.aspectRatio = ratio;
+      }
+    }
+    video.addEventListener('loadedmetadata', updateContainerAspect);
+    window.addEventListener('resize', updateContainerAspect);
+
+    // Start everything
+    listCameras().then(() => {
+      requestAnimationFrame(tick);
+    });
+  </script>
 
 </body>
+
 </html>
+
+<!-- made with <3 and a bit of chaos -->

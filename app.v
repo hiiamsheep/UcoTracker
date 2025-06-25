@@ -107,5 +107,4 @@ fn main() {
     veb.run[App, Context](mut app, 8000)
 }
 
-
 // made with <3 and a bit of chaos :3
