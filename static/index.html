@@ -389,10 +389,8 @@
     }
 
     function displayMarkerInfo(id, data) {
-      if (editingId === id) {
-        // If editing, skip update to not overwrite user input
-        return;
-      }
+      if (editingId === id) return;
+      if (editingId) return;
 
       if (!data || data.error) {
         // Show default message if no data

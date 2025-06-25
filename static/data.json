@@ -1,22 +1,2 @@
 {
-	"12":	{
-		"content":	["Item A", "Item B", "Item C"],
-		"info":	"This is marker 12, some info here."
-	},
-	"7":	{
-		"content":	[],
-		"info":	"Marker 7 has no items but some info."
-	},
-	"11":	{
-		"content":	["Content 1", "2", "3"],
-		"info":	"Description"
-	},
-	"1":	{
-		"content":	[],
-		"info":	""
-	},
-	"2":	{
-		"content":	[],
-		"info":	""
-	}
 }
