@@ -207,7 +207,7 @@
   </header>
 
   <main id="videoContainer">
-    <video id="video" autoplay muted playsinline></video>
+    <video id="video" muted playsinline></video>
     <canvas id="canvas"></canvas>
   </main>
 
@@ -288,6 +288,10 @@
         const stream = await navigator.mediaDevices.getUserMedia(constraints);
         currentStream = stream;
         video.srcObject = stream;
+
+        video.play().catch(err => {
+          alert('Could not play video: ' + err.message);
+        });
 
         video.onloadedmetadata = () => {
           canvas.width = video.videoWidth;
