@@ -16,6 +16,30 @@ Accessible on the local network.
 
 ## Installation and usage
 
+1. Download the latest release from the release tab and extract it.
+
+2. Open AcoTracker-vx.x.exe
+
+3. Open a terminal to forward the local server through Ngrok:
+
+    > Use Ngrok so we don't have to play with https certificates due to camera access :3
+
+    ```bash
+    ngrok http 8000 --basic-auth="user:password"
+    ```
+
+    > I recommend to at least use a basic authentification for security.
+
+4. How to use the app:
+
+    Print some original Aruco markers that you can find at the [Aruco marker generator](https://chev.me/arucogen/)
+
+    Go to the Ngrok-provided URL in your browser and start using the app!
+
+    > make sure to choose the "Original ArUco" Dictionnary
+
+### Or if you want to use from source
+
 1. Clone the repository:
 
     ```bash
@@ -29,20 +53,4 @@ Accessible on the local network.
     v run .
     ```
 
-3. Open another terminal and forward the local server through Ngrok:
-
-    > Use Ngrok so we don't have to play with https certificates due to camera access :3
-
-    ```bash
-    ngrok http 8000 --basic-auth="user:password"
-    ```
-
-    > I recommend at least to use a basic authentification for security.
-
-4. To use the app:
-
-    Print some original Aruco markers that you can find at the [Aruco marker generator](https://chev.me/arucogen/)
-
-    Go to the Ngrok-provided URL in your browser and start using the app!
-
-    > make sure to choose the "Original ArUco" Dictionnary
+3. Open another terminal and forward the local server through Ngrok (like explained [before](#installation-and-usage))

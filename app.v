@@ -35,6 +35,8 @@ fn save_data(data map[string]MarkerData, file string) ! {
     }
 }
 
+
+
 @['/']
 pub fn (mut app App) index(mut ctx Context) veb.Result {
     content := os.read_file('static/index.html') or {
@@ -42,6 +44,34 @@ pub fn (mut app App) index(mut ctx Context) veb.Result {
     }
     return ctx.html(content)
 }
+
+@['/about']
+pub fn (mut app App) about(mut ctx Context) veb.Result {
+    content := os.read_file('static/about.html') or {
+        return ctx.text('Error loading about.html')
+    }
+    return ctx.html(content)
+}
+
+@['/about-favicon.ico']
+pub fn (mut app App) aboutfavicon(mut ctx Context) veb.Result {
+    content := os.read_file('static/about-favicon.ico') or {
+        return ctx.text('Error loading about-favicon.ico')
+    }
+    return ctx.html(content)
+}
+
+@['/favicon.ico']
+pub fn (mut app App) favicon(mut ctx Context) veb.Result {
+    content := os.read_file('static/favicon.ico') or {
+        return ctx.text('Error loading favicon.ico')
+    }
+    return ctx.html(content)
+}
+
+
+
+
 
 @['/aruco.js']
 pub fn (mut app App) aruco_js(mut ctx Context) veb.Result {
@@ -60,6 +90,8 @@ pub fn (mut app App) cv_js(mut ctx Context) veb.Result {
     ctx.set_content_type('application/javascript')
     return ctx.text(content)
 }
+
+
 
 @['/marker_content/:id'; get]
 pub fn (mut app App) marker_content(mut ctx Context, id string) veb.Result {
@@ -93,6 +125,8 @@ pub fn (mut app App) update_marker_content(mut ctx Context, id string) veb.Resul
     ctx.set_content_type('application/json')
     return ctx.text(json.encode(parsed))
 }
+
+
 
 fn main() {
     data := load_data('static/data.json') or {

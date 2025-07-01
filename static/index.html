@@ -5,6 +5,8 @@
   <meta charset="UTF-8">
   <title>UcoTracker</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="shortcut icon" href="favicon.ico" type="image/x-icon">
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500&display=swap" rel="stylesheet">
   <style>
     body {
       margin: 0;
@@ -114,6 +116,7 @@
     }
 
     #markerInfo h3 {
+      font-family: 'Orbitron', sans-serif;
       margin-top: 0;
       font-size: 1.4rem;
       color: #f5a623;
@@ -196,6 +199,19 @@
         padding: 1rem;
       }
     }
+
+    footer {
+      font-family: monospace;
+      margin-top: 2rem;
+      font-size: 0.85rem;
+      opacity: 0.6;
+    }
+
+    footer a.about-link {
+      color: inherit;
+      cursor: default;
+      pointer-events: auto;
+    }
   </style>
 </head>
 
@@ -245,7 +261,7 @@
 
     let currentStream = null;
     const detector = new AR.Detector();
-    const markerStatus = new Map(); // id → status: 1=green,0=orange,-1=red
+    const markerStatus = new Map(); // id > status: 1=green,0=orange,-1=red
     let detectedIds = new Set();
     let frameCount = 0;
 
@@ -423,14 +439,14 @@
       hideEditForm();
     }
 
-    // Escape HTML to avoid injection lol
+    // escape html to avoid injection lol
     function escapeHtml(text) {
       const div = document.createElement('div');
       div.textContent = text;
       return div.innerHTML;
     }
 
-    // Show edit form with current marker data prefilled
+    // show edit form with current marker data prefilled
     function showEditForm(id) {
       editingId = id;
       const data = lastMarkerData[id];
@@ -482,7 +498,6 @@
       }
     });
 
-    // Add "Edit" button below marker info when marker is detected
     function addEditButton(id) {
       if (editingId === id) return; // already editing, skip
 
@@ -559,8 +574,15 @@
     listCameras().then(() => {
       requestAnimationFrame(tick);
     });
+
+    console.log("%c🐑 Hello there, curious dev!", "color: #f5a623; font-size: 14px;");
+    console.log("%cFeel free to explore the code here or on my github :3", "color: #f5a623; font-size: 14px;");
   </script>
 
+  <footer>
+    Made by <strong><a href="/about" rel="noopener noreferrer" class="about-link">hiiamsheep</a></strong> 🐑
+    <span>— updated July 2025</span>
+  </footer>
 </body>
 
 </html>
